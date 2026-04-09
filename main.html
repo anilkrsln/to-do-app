@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do Uygulaması</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Yapılacaklar Listesi</h1>
+
+    <div class="input-area">
+        <input type="text" id="yapılacak-input" placeholder="Yeni görev ekle...">
+        <button class="add-button" onclick="YapilacakEkle()">Ekle</button>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="arama-input" placeholder="Yapılacakları ara..." oninput="YapilacakAra()">
+        <button class="search-button" onclick="YapilacakAra()">Ara</button>
+    </div>
+
+    <ul id="yapılacak-liste"></ul>
+
+    <div class="footer">
+        <button class="clear-button" onclick="YapilacakTemizle()">Tümünü Temizle</button>
+    </div>
+  </div>
+
+<script>
+let yapilacaklar = JSON.parse(localStorage.getItem('yapilacaklar')) || [];
+
+yapilacaklar = (Array.isArray(yapilacaklar) ? yapilacaklar : []).map((item, index) => {
+    if (typeof item === 'string') {
+        return {
+            id: Date.now() + index,
+            text: item,
+            durum: 'yapılacak'
+        };
+    }
+
+    return {
+        id: item.id || Date.now() + index,
+        text: item.text || '',
+        durum: item.durum || 'yapılacak'
+    };
+});
+
+function KaydetLocalStorage() {
+    localStorage.setItem('yapilacaklar', JSON.stringify(yapilacaklar));
+}
+
+function YapilacakEkle() {
+    const input = document.getElementById('yapılacak-input');
+    const yeniYapilacak = input.value.trim();
+
+    if (yeniYapilacak) {
+        yapilacaklar.push({
+            id: Date.now(),
+            text: yeniYapilacak,
+            durum: 'yapılacak'
+        });
+        input.value = '';
+        KaydetLocalStorage();
+        GuncelleListe();
+    }
+}
+
+function YapilacakSil(taskId) {
+    yapilacaklar = yapilacaklar.filter((item) => item.id !== taskId);
+    KaydetLocalStorage();
+    GuncelleListe();
+}
+
+function YapilacakDuzenle(taskId) {
+    const liste = document.getElementById('yapılacak-liste');
+    const taskIndex = yapilacaklar.findIndex((item) => item.id === taskId);
+    if (taskIndex === -1) return;
+
+    const task = yapilacaklar[taskIndex];
+    const li = liste.children[taskIndex];
+    li.innerHTML = `
+        <input type="text" value="${task.text}" id="edit-input-${taskId}">
+        <select id="edit-durum-${taskId}">
+            <option value="yapılacak" ${task.durum === 'yapılacak' ? 'selected' : ''}>Yapılacak</option>
+            <option value="yapılıyor" ${task.durum === 'yapılıyor' ? 'selected' : ''}>Yapılıyor</option>
+            <option value="yapıldı" ${task.durum === 'yapıldı' ? 'selected' : ''}>Yapıldı</option>
+        </select>
+        <button class="save-button" onclick="KaydetDuzenleme(${taskId})">Kaydet</button>
+        <button class="cancel-button" onclick="IptalDuzenleme()">İptal</button>
+    `;
+}
+
+function KaydetDuzenleme(taskId) {
+    const input = document.getElementById(`edit-input-${taskId}`);
+    const statusSelect = document.getElementById(`edit-durum-${taskId}`);
+    const yeniText = input.value.trim();
+    const yeniDurum = statusSelect.value;
+    const task = yapilacaklar.find((item) => item.id === taskId);
+
+    if (task && yeniText) {
+        task.text = yeniText;
+        task.durum = yeniDurum;
+        KaydetLocalStorage();
+    }
+    GuncelleListe();
+}
+
+function IptalDuzenleme() {
+    GuncelleListe();
+}
+
+function YapilacakAra() {
+    GuncelleListe();
+}
+
+function GuncelleListe() {
+    const liste = document.getElementById('yapılacak-liste');
+    const aramaInput = document.getElementById('arama-input').value.toLowerCase();
+    liste.innerHTML = '';
+
+    yapilacaklar
+        .filter((item) => item.text.toLowerCase().includes(aramaInput))
+        .forEach((item, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="task-number">${index + 1}</div>
+                <div class="task-row">
+                    <span class="task-text">${item.text}</span>
+                    <span class="status-badge status-${item.durum}">${item.durum}</span>
+                </div>
+                <div class="buttons">
+                    <button class="edit-button" onclick="YapilacakDuzenle(${item.id})">Düzenle</button>
+                    <button class="delete-button" onclick="YapilacakSil(${item.id})">Sil</button>
+                </div>
+            `;
+            liste.appendChild(li);
+        });
+}
+
+function YapilacakTemizle() {
+    yapilacaklar = [];
+    KaydetLocalStorage();
+    GuncelleListe();
+}
+
+window.onload = GuncelleListe;
+
+</script>
+
+  
+</body>
+</html>

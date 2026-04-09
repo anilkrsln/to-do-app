@@ -1,0 +1,148 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: whitesmoke;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background-color: white;
+    padding: 200px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px purple;
+    width: 100%;
+    max-width: 1000px;
+}
+
+h1 {
+    text-align: center;
+    color: black;
+}
+
+.input-area {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.add-button {
+    background-color: magenta;
+    color: white;
+}
+
+.add-button:hover {
+    background-color: lightpink;
+}
+
+.search-button {
+    background-color: blue;
+    color: white;
+}
+
+.search-button:hover {
+    background-color: lightblue;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid white;
+}
+
+li:last-child {
+    border-bottom: none;
+}
+
+.buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.edit-button {
+    background-color: orange;
+    color: white;
+}
+
+.edit-button:hover {
+    background-color: lightsalmon;
+}
+
+.delete-button {
+    background-color: red;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: lightcoral;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.clear-button {
+    background-color: purple;
+    color: white;
+}
+
+.clear-button:hover {
+    background-color: lightsteelblue;
+}
+
+.task-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.task-text {
+    font-weight: 600;
+    color: black;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 300px;
+    font-size: 12px;
+    text-transform: capitalize  ;
+    color: white;
+}
+
+.status-yapılacak {
+    background-color: lightblue;
+}
+
+.status-yapılıyor {
+    background-color: lightsalmon;
+}
+
+.status-yapıldı {
+    background-color: lightgreen;
+}
