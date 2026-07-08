@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do — Yapılacaklar Yöneticisi</title>
+    <meta name="description" content="To-Do ile yapılacaklarınızı kolayca yönetin. Modern, hızlı ve güvenli görev yönetim uygulaması.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✅</text></svg>">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <!-- ===== Toast Container ===== -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ===== Auth Section ===== -->
+    <section class="auth-section" id="auth-section">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">To-Do</div>
+                <p class="auth-subtitle">Görevlerinizi akıllıca yönetin</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Giriş Yap</button>
+                <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Kayıt Ol</button>
+            </div>
+
+            <!-- Login Form -->
+            <form class="auth-form active" id="form-login" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-username">Kullanıcı Adı</label>
+                    <input type="text" class="form-input" id="login-username" placeholder="Kullanıcı adınızı girin" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Şifre</label>
+                    <input type="password" class="form-input" id="login-password" placeholder="Şifrenizi girin" required autocomplete="current-password">
+                </div>
+                <div class="auth-message" id="login-message"></div>
+                <button type="submit" class="auth-submit" id="login-submit">Giriş Yap</button>
+            </form>
+
+            <!-- Register Form -->
+            <form class="auth-form" id="form-register" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="register-username">Kullanıcı Adı</label>
+                    <input type="text" class="form-input" id="register-username" placeholder="Kullanıcı adı belirleyin" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Şifre</label>
+                    <input type="password" class="form-input" id="register-password" placeholder="Şifre belirleyin" required autocomplete="new-password">
+                </div>
+                <div class="auth-message" id="register-message"></div>
+                <button type="submit" class="auth-submit" id="register-submit">Kayıt Ol</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- ===== Main App Section ===== -->
+    <section class="main-section" id="main-section">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="header-logo">To-Do</div>
+                <div class="header-divider"></div>
+                <span class="user-name" id="header-username"></span>
+            </div>
+            <div class="header-user">
+                <div class="user-avatar" id="header-avatar"></div>
+                <button class="logout-btn" onclick="handleLogout()">Çıkış Yap</button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="main-content">
+            <!-- Add Todo -->
+            <div class="add-todo-card">
+                <h2>Yeni Görev Ekle</h2>
+                <form class="add-todo-form" onsubmit="handleAddTodo(event)">
+                    <div class="add-todo-row">
+                        <input type="text" class="add-todo-input" id="add-title" placeholder="Görev başlığı..." required>
+                        <button type="submit" class="add-btn" id="add-submit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Ekle
+                        </button>
+                    </div>
+                    <textarea class="add-todo-desc" id="add-description" placeholder="Açıklama (isteğe bağlı)" rows="1"></textarea>
+                </form>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <span class="search-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
+                <input type="text" class="search-input" id="search-input" placeholder="Görevlerde ara..." oninput="filterTodos()">
+                <span class="todo-count" id="todo-count"></span>
+            </div>
+
+            <!-- Todo List -->
+            <div class="todo-list" id="todo-list">
+                <div class="loading-spinner" id="loading-spinner">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </main>
+    </section>
+
+</div>
+
+<script>
+// ===== Configuration =====
+const API_BASE = '';
+
+// ===== State =====
+let allTodos = [];
+let editingId = null;
+
+// ===== SVG Icons =====
+const ICONS = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+};
+
+// ===== Utility Functions =====
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+function getUsername() {
+    return localStorage.getItem('username');
+}
+
+function setAuth(token, username) {
+    localStorage.setItem('token', token);
+    localStorage.setItem('username', username);
+}
+
+function clearAuth() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${mins}`;
+}
+
+// ===== Toast Notifications =====
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    let iconSvg = ICONS.info;
+    if (type === 'success') iconSvg = ICONS.success;
+    if (type === 'error') iconSvg = ICONS.error;
+
+    toast.innerHTML = `
+        <span class="toast-icon">${iconSvg}</span>
+        <span class="toast-message">${escapeHtml(message)}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('removing');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 3500);
+}
+
+// ===== API Helper =====
+async function apiRequest(path, options = {}) {
+    const url = `${API_BASE}${path}`;
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    const token = getToken();
+    if (token && !options.noAuth) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
+        if (response.status === 401) {
+            clearAuth();
+            showAuthSection();
+            showToast('Oturum süresi doldu. Lütfen tekrar giriş yapın.', 'error');
+            throw new Error('Unauthorized');
+        }
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || data.error || `Hata: ${response.status}`);
+        }
+        return data;
+    } catch (err) {
+        if (err.message === 'Unauthorized') throw err;
+        if (err instanceof TypeError && err.message.includes('fetch')) {
+            throw new Error('Sunucuya bağlanılamadı. Lütfen bağlantınızı kontrol edin.');
+        }
+        throw err;
+    }
+}
+
+// ===== Auth Tab Switching =====
+function switchAuthTab(tab) {
+    const loginTab = document.getElementById('tab-login');
+    const registerTab = document.getElementById('tab-register');
+    const loginForm = document.getElementById('form-login');
+    const registerForm = document.getElementById('form-register');
+
+    if (tab === 'login') {
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+    } else {
+        registerTab.classList.add('active');
+        loginTab.classList.remove('active');
+        registerForm.classList.add('active');
+        loginForm.classList.remove('active');
+    }
+
+    // Clear messages
+    document.getElementById('login-message').className = 'auth-message';
+    document.getElementById('login-message').textContent = '';
+    document.getElementById('register-message').className = 'auth-message';
+    document.getElementById('register-message').textContent = '';
+}
+
+// ===== Auth Message =====
+function showAuthMessage(formId, message, type) {
+    const el = document.getElementById(`${formId}-message`);
+    el.textContent = message;
+    el.className = `auth-message ${type}`;
+}
+
+// ===== Show/Hide Sections =====
+function showAuthSection() {
+    document.getElementById('auth-section').style.display = 'flex';
+    document.getElementById('main-section').classList.remove('active');
+}
+
+function showMainSection() {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('main-section').classList.add('active');
+    const username = getUsername();
+    document.getElementById('header-username').textContent = username || '';
+    document.getElementById('header-avatar').textContent = username ? username.charAt(0).toUpperCase() : '?';
+}
+
+// ===== Auth Handlers =====
+async function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const submitBtn = document.getElementById('login-submit');
+
+    if (!username || !password) {
+        showAuthMessage('login', 'Lütfen tüm alanları doldurun.', 'error');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Giriş yapılıyor...';
+
+    try {
+        const data = await apiRequest('/api/v1/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password }),
+            noAuth: true
+        });
+        setAuth(data.token, username);
+        showMainSection();
+        showToast(`Hoş geldin, ${username}!`, 'success');
+        fetchTodos();
+    } catch (err) {
+        showAuthMessage('login', err.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Giriş Yap';
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value;
+    const submitBtn = document.getElementById('register-submit');
+
+    if (!username || !password) {
+        showAuthMessage('register', 'Lütfen tüm alanları doldurun.', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        showAuthMessage('register', 'Şifre en az 6 karakter olmalıdır.', 'error');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Kayıt yapılıyor...';
+
+    try {
+        await apiRequest('/api/v1/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, password }),
+            noAuth: true
+        });
+        showAuthMessage('register', 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'success');
+        setTimeout(() => switchAuthTab('login'), 1500);
+    } catch (err) {
+        showAuthMessage('register', err.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Kayıt Ol';
+    }
+}
+
+// ===== Logout =====
+function handleLogout() {
+    clearAuth();
+    allTodos = [];
+    editingId = null;
+    document.getElementById('login-username').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('register-username').value = '';
+    document.getElementById('register-password').value = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('login-message').className = 'auth-message';
+    document.getElementById('register-message').className = 'auth-message';
+    switchAuthTab('login');
+    showAuthSection();
+    showToast('Başarıyla çıkış yapıldı.', 'info');
+}
+
+// ===== Fetch Todos =====
+async function fetchTodos() {
+    const list = document.getElementById('todo-list');
+    list.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+    try {
+        const data = await apiRequest('/api/v1/todos');
+        allTodos = Array.isArray(data) ? data : [];
+        renderTodos();
+    } catch (err) {
+        if (err.message !== 'Unauthorized') {
+            list.innerHTML = '';
+            showToast('Görevler yüklenirken hata oluştu.', 'error');
+        }
+    }
+}
+
+// ===== Render Todos =====
+function renderTodos() {
+    const list = document.getElementById('todo-list');
+    const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+
+    const filtered = allTodos.filter(todo => {
+        const title = (todo.title || '').toLowerCase();
+        const desc = (todo.description || '').toLowerCase();
+        return title.includes(searchTerm) || desc.includes(searchTerm);
+    });
+
+    // Sort: incomplete first, then by created_at descending
+    filtered.sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+
+    // Update count
+    const countEl = document.getElementById('todo-count');
+    const doneCount = allTodos.filter(t => t.completed).length;
+    countEl.textContent = `${doneCount}/${allTodos.length} tamamlandı`;
+
+    if (filtered.length === 0) {
+        if (allTodos.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <h3>Henüz görev yok</h3>
+                    <p>Yukarıdan yeni bir görev ekleyerek başlayın!</p>
+                </div>
+            `;
+        } else {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <h3>Sonuç bulunamadı</h3>
+                    <p>Arama kriterlerinize uygun görev bulunamadı.</p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    list.innerHTML = filtered.map(todo => {
+        if (editingId === todo.id) {
+            return renderEditItem(todo);
+        }
+        return renderTodoItem(todo);
+    }).join('');
+}
+
+function renderTodoItem(todo) {
+    const completedClass = todo.completed ? 'completed' : '';
+    const statusBadge = todo.completed
+        ? '<span class="status-badge done">Yapıldı</span>'
+        : '<span class="status-badge todo">Yapılacak</span>';
+    const descHtml = todo.description
+        ? `<div class="todo-description">${escapeHtml(todo.description)}</div>`
+        : '';
+    const dateStr = formatDate(todo.created_at);
+
+    return `
+        <div class="todo-item ${completedClass}" data-id="${todo.id}">
+            <label class="todo-checkbox">
+                <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}', this.checked)">
+                <span class="checkmark">${ICONS.check}</span>
+            </label>
+            <div class="todo-content">
+                <div class="todo-title">${escapeHtml(todo.title)}</div>
+                ${descHtml}
+                <div class="todo-meta">
+                    ${statusBadge}
+                    ${dateStr ? `<span class="todo-date">${ICONS.clock} ${dateStr}</span>` : ''}
+                </div>
+            </div>
+            <div class="todo-actions">
+                <button class="action-btn edit-btn" onclick="startEdit('${todo.id}')" title="Düzenle">${ICONS.edit}</button>
+                <button class="action-btn delete-btn" onclick="deleteTodo('${todo.id}')" title="Sil">${ICONS.trash}</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderEditItem(todo) {
+    return `
+        <div class="todo-item" data-id="${todo.id}">
+            <form class="todo-edit-form" onsubmit="saveEdit(event, '${todo.id}')">
+                <input type="text" value="${escapeHtml(todo.title)}" id="edit-title-${todo.id}" placeholder="Görev başlığı" required>
+                <textarea id="edit-desc-${todo.id}" placeholder="Açıklama (isteğe bağlı)" rows="2">${escapeHtml(todo.description || '')}</textarea>
+                <div class="edit-actions">
+                    <button type="submit" class="edit-save-btn">Kaydet</button>
+                    <button type="button" class="edit-cancel-btn" onclick="cancelEdit()">İptal</button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+// ===== Filter =====
+function filterTodos() {
+    renderTodos();
+}
+
+// ===== Add Todo =====
+async function handleAddTodo(e) {
+    e.preventDefault();
+    const titleInput = document.getElementById('add-title');
+    const descInput = document.getElementById('add-description');
+    const submitBtn = document.getElementById('add-submit');
+    const title = titleInput.value.trim();
+    const description = descInput.value.trim();
+
+    if (!title) return;
+
+    submitBtn.disabled = true;
+
+    try {
+        const body = { title };
+        if (description) body.description = description;
+        const newTodo = await apiRequest('/api/v1/todos', {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+        allTodos.unshift(newTodo);
+        titleInput.value = '';
+        descInput.value = '';
+        renderTodos();
+        showToast('Görev başarıyla eklendi!', 'success');
+    } catch (err) {
+        if (err.message !== 'Unauthorized') {
+            showToast(err.message || 'Görev eklenirken hata oluştu.', 'error');
+        }
+    } finally {
+        submitBtn.disabled = false;
+    }
+}
+
+// ===== Toggle Todo =====
+async function toggleTodo(id, completed) {
+    try {
+        const updated = await apiRequest(`/api/v1/todos/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ completed })
+        });
+        const idx = allTodos.findIndex(t => t.id === id);
+        if (idx !== -1) {
+            allTodos[idx] = { ...allTodos[idx], ...updated };
+        }
+        renderTodos();
+        showToast(completed ? 'Görev tamamlandı! 🎉' : 'Görev yeniden aktif edildi.', 'success');
+    } catch (err) {
+        if (err.message !== 'Unauthorized') {
+            showToast('Durum güncellenirken hata oluştu.', 'error');
+            renderTodos();
+        }
+    }
+}
+
+// ===== Edit Todo =====
+function startEdit(id) {
+    editingId = id;
+    renderTodos();
+    const titleInput = document.getElementById(`edit-title-${id}`);
+    if (titleInput) titleInput.focus();
+}
+
+function cancelEdit() {
+    editingId = null;
+    renderTodos();
+}
+
+async function saveEdit(e, id) {
+    e.preventDefault();
+    const titleInput = document.getElementById(`edit-title-${id}`);
+    const descInput = document.getElementById(`edit-desc-${id}`);
+    const title = titleInput.value.trim();
+    const description = descInput.value.trim();
+
+    if (!title) {
+        showToast('Başlık boş olamaz.', 'error');
+        return;
+    }
+
+    try {
+        const updated = await apiRequest(`/api/v1/todos/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ title, description })
+        });
+        const idx = allTodos.findIndex(t => t.id === id);
+        if (idx !== -1) {
+            allTodos[idx] = { ...allTodos[idx], ...updated };
+        }
+        editingId = null;
+        renderTodos();
+        showToast('Görev güncellendi!', 'success');
+    } catch (err) {
+        if (err.message !== 'Unauthorized') {
+            showToast(err.message || 'Güncelleme sırasında hata oluştu.', 'error');
+        }
+    }
+}
+
+// ===== Delete Todo =====
+async function deleteTodo(id) {
+    try {
+        await apiRequest(`/api/v1/todos/${id}`, {
+            method: 'DELETE'
+        });
+        allTodos = allTodos.filter(t => t.id !== id);
+        renderTodos();
+        showToast('Görev silindi.', 'info');
+    } catch (err) {
+        if (err.message !== 'Unauthorized') {
+            showToast(err.message || 'Silme sırasında hata oluştu.', 'error');
+        }
+    }
+}
+
+// ===== Keyboard Shortcuts =====
+document.addEventListener('keydown', (e) => {
+    // Escape closes edit mode
+    if (e.key === 'Escape' && editingId !== null) {
+        cancelEdit();
+    }
+});
+
+// ===== Init =====
+(async function init() {
+    const token = getToken();
+    if (token) {
+        showMainSection();
+        try {
+            const data = await apiRequest('/api/v1/todos');
+            allTodos = Array.isArray(data) ? data : [];
+            renderTodos();
+        } catch (err) {
+            if (err.message === 'Unauthorized') {
+                showAuthSection();
+            } else {
+                renderTodos();
+                showToast('Görevler yüklenirken hata oluştu.', 'error');
+            }
+        }
+    } else {
+        showAuthSection();
+    }
+})();
+</script>
+
+</body>
+</html>
